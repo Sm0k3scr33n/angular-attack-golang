@@ -95,7 +95,7 @@ func (dbo *DataLayerObject) SaveGeneric(obj interface{}) error {
 	}
 	return nil
 }
-
+/*
 func main() {
 	dal := NewDataLayer()
 	defer dal.Close()
@@ -118,3 +118,4 @@ func main() {
 	// }
 	// fmt.Println(result)
 }
+*/
