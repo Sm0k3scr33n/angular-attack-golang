@@ -19,12 +19,14 @@ type GeoLoc struct {
      Name string
      Lat string
      Lng string
+     Url string
 }
 
 type Challenge struct {
      Place string
      Lat string
      Lng string
+     Url string
      Verb string
      Noun string
 }
@@ -61,7 +63,7 @@ func challengeGet(response http.ResponseWriter, request *http.Request) {
 	lat := vars["lat"]
 	lng := vars["lng"]
 
-	url := fmt.Sprintf("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%s,%s&type=restaurant&radius=500&key=AIzaSyDv8MqlGr7dxQDCb7STkYGRqdCA5wuLHMM", lat, lng)
+	url := fmt.Sprintf("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%s,%s&radius=1000&key=AIzaSyDv8MqlGr7dxQDCb7STkYGRqdCA5wuLHMM", lat, lng)
 	resp, err := http.Get(url)
 
 	if err != nil {
@@ -86,6 +88,11 @@ func challengeGet(response http.ResponseWriter, request *http.Request) {
 
 		result := results[i].(map[string]interface{})
 
+		photos := result["photos"].([]interface{})
+		photo := photos[0].(map[string]interface{})
+		photoID := photo["photo_reference"]
+		fmt.Println(photoID)
+		url := photoID.(string)
 		geometry := result["geometry"].(map[string]interface{})
 		location := geometry["location"].(map[string]interface{})
 
@@ -93,7 +100,7 @@ func challengeGet(response http.ResponseWriter, request *http.Request) {
 		lat := location["lat"].(float64)
 		lng := location["lng"].(float64)
 
-		item := GeoLoc{Name: name,Lat: FloatToString(lat),Lng: FloatToString(lng)}
+		item := GeoLoc{Name: name,Lat: FloatToString(lat),Lng: FloatToString(lng), Url: url}
 
 		results[i] = item
 	}
@@ -105,7 +112,7 @@ func challengeGet(response http.ResponseWriter, request *http.Request) {
 
 	//fmt.Println(verbsMap["present"])
 	//fmt.Println(nouns[rand.Intn(len(nouns))])
-	challenge := Challenge{result.Name, result.Lat, result.Lng, verbsMap["present"].(string), nouns[rand.Intn(len(nouns))].(string)}
+	challenge := Challenge{result.Name, result.Lat, result.Lng, result.Url, verbsMap["present"].(string), nouns[rand.Intn(len(nouns))].(string)}
         //fmt.Println(result)
 
 	b, err := json.Marshal(challenge)
