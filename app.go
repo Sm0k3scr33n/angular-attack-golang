@@ -21,6 +21,23 @@ type GeoLoc struct {
      Lng string
 }
 
+type Challenge struct {
+     Place string
+     Lat string
+     Lng string
+     Verb string
+     Noun string
+}
+
+var nouns []interface {}
+var verbs []interface {}
+
+func check(e error) {
+    if e != nil {
+        panic(e)
+    }
+}
+
 
 func FloatToString(input_num float64) string {
     // to convert a float number to a string
@@ -83,12 +100,17 @@ func challengeGet(response http.ResponseWriter, request *http.Request) {
 
 	//fmt.Println(results)
 	//fmt.Print(rand.Intn(len(results)))
-	result := results[rand.Intn(len(results))]
-        fmt.Println(result)
+	result := results[rand.Intn(len(results))].(GeoLoc)
+	verbsMap := verbs[rand.Intn(len(verbs))].(map[string]interface{})
 
-	b, err := json.Marshal(result)
+	//fmt.Println(verbsMap["present"])
+	//fmt.Println(nouns[rand.Intn(len(nouns))])
+	challenge := Challenge{result.Name, result.Lat, result.Lng, verbsMap["present"].(string), nouns[rand.Intn(len(nouns))].(string)}
+        //fmt.Println(result)
 
-	fmt.Println(b)
+	b, err := json.Marshal(challenge)
+
+	//fmt.Println(b)
 
 	response.Write(b)
 }
@@ -121,6 +143,29 @@ func appVersion(w http.ResponseWriter, req *http.Request) {
 var router = mux.NewRouter()
 
 func main() {
+
+	dat, err := ioutil.ReadFile("./nouns.json")
+	check(err)
+	fmt.Println(string(dat))
+
+        var n interface{}
+        nounJsonParseErr := json.Unmarshal(dat, &n)
+	check(nounJsonParseErr)
+
+        nounsMap := n.(map[string]interface{})
+	nouns = nounsMap["nouns"].([]interface {})
+        fmt.Println(nouns)
+
+	var v interface{}
+	verbDat, verbIOerr := ioutil.ReadFile("./verbs.json")
+	check(verbIOerr)
+	verbJsonParseErr := json.Unmarshal(verbDat, &v)
+        check(verbJsonParseErr)
+
+        verbsMap := v.(map[string]interface{})
+        verbs = verbsMap["verbs"].([]interface {})
+        fmt.Println(verbs)
+
 	router.NotFoundHandler = http.HandlerFunc(pageHandler404)
 	///handlers for the gorilla mux router
 	router.HandleFunc("/", indexPageHandler)
