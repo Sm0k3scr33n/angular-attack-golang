@@ -26,6 +26,7 @@ type DataLayerInterface interface {
   Open(connStr string) error
   Close() error
   SaveStruct(obj *Challenge) error
+  SaveGeneric(obj interface{}) error
 }
 
 type DataLayerObject struct {
@@ -36,16 +37,23 @@ type DataLayerObject struct {
 // DataLayerInterface. Internal state is held by DataLayerObject
 func NewDataLayer() DataLayerInterface {
   obj := DataLayerObject{}
-  obj.Open(MONGO_HOST)
+  err := obj.Open(MONGO_HOST)
+  if err != nil {
+    panic(err)
+  }
   return &obj
 }
 
 // Open a mongo connection within the DataLayerObject
 // which implements the DataLayerInterface.
 func (dbo *DataLayerObject) Open(connStr string) error {
+  if dbo.session != nil {
+    dbo.Close()
+  }
   session, err := mgo.Dial(connStr)
   if err != nil {
-    panic(err)
+    log.Fatal(err)
+    return err
   }
   log.Println("successfully opened dbo connection")
   dbo.session = session
@@ -54,8 +62,12 @@ func (dbo *DataLayerObject) Open(connStr string) error {
 
 // Close the mongo connection (if exists) within the DataLayerObject.
 func (dbo *DataLayerObject) Close() error {
-  log.Println("closed dbo session")
+  if dbo.session == nil {
+    return nil
+  }
   dbo.session.Close();
+  dbo.session = nil
+  log.Println("closed dbo session")
   return nil
 }
 
@@ -68,8 +80,19 @@ func (dbo *DataLayerObject) SaveStruct(obj *Challenge) error {
   err := c.Insert(&obj)
   if err != nil {
     log.Fatal(err)
+    return err
   }
+  return nil
+}
 
+func (dbo *DataLayerObject) SaveGeneric(obj interface{}) error {
+  // c = collection
+  c := dbo.session.DB(MONGO_DB).C("challenges")
+
+  err := c.Insert(&obj)
+  if err != nil {
+    log.Fatal(err)
+  }
   return nil
 }
 
@@ -83,7 +106,8 @@ func main() {
                    Score: 10,
                    CreatedAt: time.Now(),
                    UpdatedAt: time.Now()}
-  dal.SaveStruct(&obj)
+  // dal.SaveStruct(&obj)
+  dal.SaveGeneric(&obj)
 
 
   // fetching data from the collection...
