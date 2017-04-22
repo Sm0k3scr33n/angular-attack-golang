@@ -7,6 +7,8 @@ import (
   "fmt"
   "github.com/gorilla/mux"
   "io/ioutil"
+  "encoding/json"
+  "math/rand"
   //"github.com/gorilla/securecookie"
   //"gopkg.in/mgo.v2"
   //"gopkg.in/mgo.v2/bson"
@@ -35,7 +37,7 @@ func challengeGet(response http.ResponseWriter, request *http.Request) {
 	lat := vars["lat"]
 	lng := vars["lng"]
 
-	url := fmt.Sprintf("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%s,%s&radius=500&key=AIzaSyDv8MqlGr7dxQDCb7STkYGRqdCA5wuLHMM", lat, lng)
+	url := fmt.Sprintf("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%s,%s&type=restaurant&radius=500&key=AIzaSyDv8MqlGr7dxQDCb7STkYGRqdCA5wuLHMM", lat, lng)
 	resp, err := http.Get(url)
 
 	if err != nil {
@@ -44,6 +46,26 @@ func challengeGet(response http.ResponseWriter, request *http.Request) {
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
+
+	var f interface{}
+	jsonParseErr := json.Unmarshal(body, &f)
+
+        if jsonParseErr != nil {
+	   //handle error next time 
+        }
+
+	m := f.(map[string]interface{})
+	results := m["results"].([]interface{})
+//	var placeIDs = results[1:len(results)]
+
+	for i := 0; i < len(results); i++ {
+	     placeIDMap := results[i].(map[string]interface{})
+	     results[i] = placeIDMap["place_id"]
+	}
+
+	fmt.Println(results)
+	fmt.Print(rand.Intn(len(results)))
+
 	response.Write(body)
 }
 
