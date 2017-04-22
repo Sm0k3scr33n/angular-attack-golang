@@ -19,6 +19,25 @@ type GeoLoc struct {
      Name string
      Lat string
      Lng string
+     Url string
+}
+
+type Challenge struct {
+     Place string
+     Lat string
+     Lng string
+     Url string
+     Verb string
+     Noun string
+}
+
+var nouns []interface {}
+var verbs []interface {}
+
+func check(e error) {
+    if e != nil {
+        panic(e)
+    }
 }
 
 
@@ -44,7 +63,7 @@ func challengeGet(response http.ResponseWriter, request *http.Request) {
 	lat := vars["lat"]
 	lng := vars["lng"]
 
-	url := fmt.Sprintf("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%s,%s&type=restaurant&radius=500&key=AIzaSyDv8MqlGr7dxQDCb7STkYGRqdCA5wuLHMM", lat, lng)
+	url := fmt.Sprintf("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%s,%s&radius=1000&key=AIzaSyDv8MqlGr7dxQDCb7STkYGRqdCA5wuLHMM", lat, lng)
 	resp, err := http.Get(url)
 
 	if err != nil {
@@ -69,6 +88,11 @@ func challengeGet(response http.ResponseWriter, request *http.Request) {
 
 		result := results[i].(map[string]interface{})
 
+		photos := result["photos"].([]interface{})
+		photo := photos[0].(map[string]interface{})
+		photoID := photo["photo_reference"]
+		fmt.Println(photoID)
+		url := photoID.(string)
 		geometry := result["geometry"].(map[string]interface{})
 		location := geometry["location"].(map[string]interface{})
 
@@ -76,19 +100,24 @@ func challengeGet(response http.ResponseWriter, request *http.Request) {
 		lat := location["lat"].(float64)
 		lng := location["lng"].(float64)
 
-		item := GeoLoc{Name: name,Lat: FloatToString(lat),Lng: FloatToString(lng)}
+		item := GeoLoc{Name: name,Lat: FloatToString(lat),Lng: FloatToString(lng), Url: url}
 
 		results[i] = item
 	}
 
 	//fmt.Println(results)
 	//fmt.Print(rand.Intn(len(results)))
-	result := results[rand.Intn(len(results))]
-        fmt.Println(result)
+	result := results[rand.Intn(len(results))].(GeoLoc)
+	verbsMap := verbs[rand.Intn(len(verbs))].(map[string]interface{})
 
-	b, err := json.Marshal(result)
+	//fmt.Println(verbsMap["present"])
+	//fmt.Println(nouns[rand.Intn(len(nouns))])
+	challenge := Challenge{result.Name, result.Lat, result.Lng, result.Url, verbsMap["present"].(string), nouns[rand.Intn(len(nouns))].(string)}
+        //fmt.Println(result)
 
-	fmt.Println(b)
+	b, err := json.Marshal(challenge)
+
+	//fmt.Println(b)
 
 	response.Write(b)
 }
@@ -121,6 +150,29 @@ func appVersion(w http.ResponseWriter, req *http.Request) {
 var router = mux.NewRouter()
 
 func main() {
+
+	dat, err := ioutil.ReadFile("./nouns.json")
+	check(err)
+	fmt.Println(string(dat))
+
+        var n interface{}
+        nounJsonParseErr := json.Unmarshal(dat, &n)
+	check(nounJsonParseErr)
+
+        nounsMap := n.(map[string]interface{})
+	nouns = nounsMap["nouns"].([]interface {})
+        fmt.Println(nouns)
+
+	var v interface{}
+	verbDat, verbIOerr := ioutil.ReadFile("./verbs.json")
+	check(verbIOerr)
+	verbJsonParseErr := json.Unmarshal(verbDat, &v)
+        check(verbJsonParseErr)
+
+        verbsMap := v.(map[string]interface{})
+        verbs = verbsMap["verbs"].([]interface {})
+        fmt.Println(verbs)
+
 	router.NotFoundHandler = http.HandlerFunc(pageHandler404)
 	///handlers for the gorilla mux router
 	router.HandleFunc("/", indexPageHandler)
