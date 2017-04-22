@@ -6,6 +6,7 @@ import (
   "html"
   "fmt"
   "github.com/gorilla/mux"
+  "io/ioutil"
   //"github.com/gorilla/securecookie"
   //"gopkg.in/mgo.v2"
   //"gopkg.in/mgo.v2/bson"
@@ -30,7 +31,20 @@ func challengePost(response http.ResponseWriter, request *http.Request) {
 }
 
 func challengeGet(response http.ResponseWriter, request *http.Request) {
+	vars := mux.Vars(request)
+	lat := vars["lat"]
+	lng := vars["lng"]
 
+	url := fmt.Sprintf("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%s,%s&radius=500&key=AIzaSyDv8MqlGr7dxQDCb7STkYGRqdCA5wuLHMM", lat, lng)
+	resp, err := http.Get(url)
+
+	if err != nil {
+	   // handle error
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	response.Write(body)
 }
 
 func uploadPhotoHandler(response http.ResponseWriter, request *http.Request) {
@@ -65,7 +79,7 @@ func main() {
     ///handlers for the gorilla mux router
     router.HandleFunc("/", indexPageHandler)
     router.HandleFunc("/challenge", challengePost).Methods("POST")
-    router.HandleFunc("/challenge", challengeGet).Methods("GET")
+    router.HandleFunc("/challenge/{lat}/{lng}", challengeGet).Methods("GET")
     // router.HandleFunc("/location", Location).Methods("GET")
     router.HandleFunc("/uploadphoto", uploadPhotoHandler).Methods("POST")
     router.HandleFunc("/vote", voteHandler).Methods("POST")
@@ -74,5 +88,5 @@ func main() {
      go http.ListenAndServe(port, http.HandlerFunc(appVersion))
     // port2 := ":443"
       // go http.ListenAndServeTLS(port2,"cert.pem", "key.pem", http.HandlerFunc(appVersion))
-    http.ListenAndServeTLS(":443", "cert.pem", "key.pem", http.HandlerFunc(appVersion))
+    http.ListenAndServeTLS(":443", "cert.pem", "key.pem", nil)
 }
