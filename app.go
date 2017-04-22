@@ -166,23 +166,7 @@ var cookieHandler = securecookie.New(
         fmt.Fprintf(response, signupPage)
 }
 
-func signupHandler(response http.ResponseWriter, request *http.Request){
-   fname := request.FormValue("fname")
-   lname := request.FormValue("lname")
-   email := request.FormValue("email")
-   phone := request.FormValue("phone")
-   password := request.FormValue("password")
-   fmt.Fprintf(response, "you submitted something" + fname + " " + lname + " " + email + " " + phone + " " + password)
-   // Set up authentication information.
-   sender := NewSender("email@example.com", "password")
- //The receiver needs to be in slice as the receive supports multiple receiver
-   //eventually this should reflect a passed variable when the user signs up
- Receiver := []string{ "email@example2.com", "email@example.com"}
- Subject := "Sign up successfully completed. Thank you."
- bodyMessage := "Sending email using Golang. Yeah\n\n" + fname + " " + lname + " " + email + " " + phone + " " + password
- sender.SendMail(Receiver, Subject, bodyMessage)
 
-}
 
 func logoutHandler(response http.ResponseWriter, request *http.Request) {
     clearSession(response)
@@ -237,13 +221,11 @@ func main() {
     router.HandleFunc("/internal", internalPageHandler)
     router.HandleFunc("/noaccess", noAccesHandler)
     router.HandleFunc("/badCredentials", badCredentials)
-    router.HandleFunc("/signup-page", signup)
     ///router.HandleFunc("/signup", signupAction)
     ///router.HandleFunc("", )
     ///router.HandleFunc("/resetPassword", resetPasswordHandler).Methods.("POST")
-    router.HandleFunc("/signup", signupHandler).Methods("POST")
     router.HandleFunc("/login", loginHandler).Methods("POST")
     router.HandleFunc("/logout", logoutHandler).Methods("POST")
     http.Handle("/", router)
-    http.ListenAndServeTLS(":8000", "server.crt", "server.key", nil)
+    http.ListenAndServeTLS(":8000", "cert.pem", "key.pem", nil)
 }
