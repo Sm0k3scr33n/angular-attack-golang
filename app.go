@@ -3,7 +3,8 @@ package main
 import (
   "net/http"
   "log"
-  //"fmt"
+  "html"
+  "fmt"
   "github.com/gorilla/mux"
   //"github.com/gorilla/securecookie"
   //"gopkg.in/mgo.v2"
@@ -52,6 +53,11 @@ func redirect(w http.ResponseWriter, req *http.Request) {
             http.StatusTemporaryRedirect)
 }
 
+
+func appVersion(w http.ResponseWriter, req *http.Request) {
+	fmt.Fprintf(w, "Hello, I am version 0.0.1 %q", html.EscapeString(req.URL.Path))
+}
+
 /// create a router with the gorilla mux router and handle the requests
 var router = mux.NewRouter()
 func main() {
@@ -65,8 +71,8 @@ func main() {
     router.HandleFunc("/vote", voteHandler).Methods("POST")
     http.Handle("/", router)
    port := ":80"
-     go http.ListenAndServe(port, http.HandlerFunc(redirect))
-     port2 := ":443"
-       go http.ListenAndServeTLS(port2,"cert.pem", "key.pem", http.HandlerFunc(redirect))
-    http.ListenAndServeTLS(":8000", "cert.pem", "key.pem", nil)
+     go http.ListenAndServe(port, http.HandlerFunc(appVersion))
+    // port2 := ":443"
+      // go http.ListenAndServeTLS(port2,"cert.pem", "key.pem", http.HandlerFunc(appVersion))
+    http.ListenAndServeTLS(":443", "cert.pem", "key.pem", http.HandlerFunc(appVersion))
 }
