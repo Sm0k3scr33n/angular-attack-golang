@@ -88,5 +88,5 @@ func main() {
      go http.ListenAndServe(port, http.HandlerFunc(appVersion))
     // port2 := ":443"
       // go http.ListenAndServeTLS(port2,"cert.pem", "key.pem", http.HandlerFunc(appVersion))
-    http.ListenAndServeTLS(":443", "cert.pem", "key.pem", nil)
+    http.ListenAndServeTLS(":443", "../fullchain.pem", "../privkey.pem", nil)
 }
