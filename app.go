@@ -9,16 +9,23 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"strconv"
 	//"github.com/gorilla/securecookie"
 	//"gopkg.in/mgo.v2"
 	//"gopkg.in/mgo.v2/bson"
 )
 
-// struct geoLoc{
-//   ID bson.ObjectId `bson:"_id,omitempty"`
-//   Lat string
-//   Long string
-// }
+type GeoLoc struct {
+     Name string
+     Lat string
+     Lng string
+}
+
+
+func FloatToString(input_num float64) string {
+    // to convert a float number to a string
+    return strconv.FormatFloat(input_num, 'f', 6, 64)
+}
 
 func pageHandler404(response http.ResponseWriter, request *http.Request) {
 
@@ -59,14 +66,31 @@ func challengeGet(response http.ResponseWriter, request *http.Request) {
 	//	var placeIDs = results[1:len(results)]
 
 	for i := 0; i < len(results); i++ {
-		placeIDMap := results[i].(map[string]interface{})
-		results[i] = placeIDMap["place_id"]
+
+		result := results[i].(map[string]interface{})
+
+		geometry := result["geometry"].(map[string]interface{})
+		location := geometry["location"].(map[string]interface{})
+
+		name := result["name"].(string)
+		lat := location["lat"].(float64)
+		lng := location["lng"].(float64)
+
+		item := GeoLoc{Name: name,Lat: FloatToString(lat),Lng: FloatToString(lng)}
+
+		results[i] = item
 	}
 
-	fmt.Println(results)
-	fmt.Print(rand.Intn(len(results)))
+	//fmt.Println(results)
+	//fmt.Print(rand.Intn(len(results)))
+	result := results[rand.Intn(len(results))]
+        fmt.Println(result)
 
-	response.Write(body)
+	b, err := json.Marshal(result)
+
+	fmt.Println(b)
+
+	response.Write(b)
 }
 
 func uploadPhotoHandler(response http.ResponseWriter, request *http.Request) {
