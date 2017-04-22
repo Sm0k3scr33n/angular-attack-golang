@@ -7,6 +7,7 @@ import (
   "fmt"
   "github.com/gorilla/mux"
   "io/ioutil"
+  "encoding/json"
   //"github.com/gorilla/securecookie"
   //"gopkg.in/mgo.v2"
   //"gopkg.in/mgo.v2/bson"
@@ -44,6 +45,21 @@ func challengeGet(response http.ResponseWriter, request *http.Request) {
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
+
+	var f interface{}
+	jsonParseErr := json.Unmarshal(body, &f)
+
+        if jsonParseErr != nil {
+	   //handle error next time 
+        }
+
+	m := f.(map[string]interface{})
+	results := m["results"].([]interface{})
+
+	placeIDMap := results[0].(map[string]interface{})
+
+	fmt.Println(placeIDMap["place_id"])
+
 	response.Write(body)
 }
 
