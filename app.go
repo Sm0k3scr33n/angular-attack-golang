@@ -11,10 +11,14 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
+        "sync"
 	//"github.com/gorilla/securecookie"
 	//"gopkg.in/mgo.v2"
 	//"gopkg.in/mgo.v2/bson"
 )
+
+const TLS_CERT_FILE = "/root/fullchain.pem"
+const TLS_KEY_FILE = "/root/privkey.pem"
 
 type GeoLoc struct {
      Name string
@@ -30,6 +34,12 @@ type Challenge struct {
      Url string
      Verb string
      Noun string
+}
+
+// Structure for class variables and members for use 
+// in handlers.
+type AppObject struct {
+    dbo *DataLayerObject
 }
 
 var nouns []interface {}
@@ -150,14 +160,38 @@ func appVersion(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(w, "Hello, I am version 0.0.1 %q", html.EscapeString(req.URL.Path))
 }
 
+func testDataLayer() {
+	dal := NewDataLayer()
+	defer dal.Close()
+}
+
+func start80(wg *sync.WaitGroup, handler http.HandlerFunc) {
+        log.Println("starting server on 80")
+        defer wg.Done()
+        err := http.ListenAndServe(":80", handler)
+        log.Println(err)
+        log.Println("done with 80")
+}
+
+func start443(wg *sync.WaitGroup, handler http.Handler) {
+        log.Println("starting server on 443")
+        defer wg.Done()
+        err := http.ListenAndServeTLS(":443", TLS_CERT_FILE, TLS_KEY_FILE, handler)
+        log.Println(err)
+        log.Println("done with 443")
+}
+
+
 /// create a router with the gorilla mux router and handle the requests
 var router = mux.NewRouter()
 
 func main() {
 
+        // testDataLayer()
+
 	dat, err := ioutil.ReadFile("./nouns.json")
 	check(err)
-	fmt.Println(string(dat))
+	// fmt.Println(string(dat))
 
         var n interface{}
         nounJsonParseErr := json.Unmarshal(dat, &n)
@@ -165,7 +199,7 @@ func main() {
 
         nounsMap := n.(map[string]interface{})
 	nouns = nounsMap["nouns"].([]interface {})
-        fmt.Println(nouns)
+        // fmt.Println(nouns)
 
 	var v interface{}
 	verbDat, verbIOerr := ioutil.ReadFile("./verbs.json")
@@ -175,7 +209,7 @@ func main() {
 
         verbsMap := v.(map[string]interface{})
         verbs = verbsMap["verbs"].([]interface {})
-        fmt.Println(verbs)
+        // fmt.Println(verbs)
 
 	router.NotFoundHandler = http.HandlerFunc(pageHandler404)
 	///handlers for the gorilla mux router
@@ -186,10 +220,16 @@ func main() {
 	router.HandleFunc("/uploadphoto", uploadPhotoHandler).Methods("POST")
 	router.HandleFunc("/vote", voteHandler).Methods("POST")
 	http.Handle("/", router)
-	handler := cors.Default().Handler(router)
-	port := ":80"
-	go http.ListenAndServe(port, http.HandlerFunc(appVersion))
-	// port2 := ":443"
-	// go http.ListenAndServeTLS(port2,"cert.pem", "key.pem", http.HandlerFunc(appVersion))
-	http.ListenAndServeTLS(":443", "../fullchain.pem", "../privkey.pem", handler)
+
+        // corsOpts := cors.Default()
+        corsOpts := cors.New(cors.Options{
+                Debug: false,
+        })
+	handler := corsOpts.Handler(router)
+
+        var wg sync.WaitGroup
+        wg.Add(2)
+        go start80(&wg, http.HandlerFunc(appVersion))
+        go start443(&wg, handler)
+        wg.Wait()
 }

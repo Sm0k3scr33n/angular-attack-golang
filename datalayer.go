@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"gopkg.in/mgo.v2"
 	"log"
-	"time"
+	// "time"
 	// "gopkg.in/mgo.v2/bson"
 )
 
@@ -12,14 +12,19 @@ import (
 const MONGO_HOST = "localhost"
 const MONGO_DB = "test"
 
-type Challenge struct {
-	Id           int
-	Latitude     string
-	Longitude    string
-	ChallengeStr string
-	Score        int
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+
+// type Challenge struct {
+// 	Id           int
+// 	Latitude     string
+// 	Longitude    string
+// 	ChallengeStr string
+// 	Score        int
+// 	CreatedAt    time.Time
+// 	UpdatedAt    time.Time
+// }
+
+type DataLayerObject struct {
+	session *mgo.Session // reference to mgo connection object
 }
 
 type DataLayerInterface interface {
@@ -27,10 +32,8 @@ type DataLayerInterface interface {
 	Close() error
 	SaveStruct(obj *Challenge) error
 	SaveGeneric(obj interface{}) error
-}
 
-type DataLayerObject struct {
-	session *mgo.Session // reference to mgo connection object
+	SaveChallenge(obj interface{}) error
 }
 
 // NewDataLayer() factory returns an object that implements
@@ -95,6 +98,18 @@ func (dbo *DataLayerObject) SaveGeneric(obj interface{}) error {
 	}
 	return nil
 }
+
+func (dbo *DataLayerObject) SaveChallenge(obj interface{}) error {
+	// c = collection
+	c := dbo.session.DB(MONGO_DB).C("challenges")
+
+	err := c.Insert(&obj)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return nil
+}
+
 /*
 func main() {
 	dal := NewDataLayer()
