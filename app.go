@@ -50,6 +50,7 @@ type AppInterface interface {
 	indexPageHandler(response http.ResponseWriter, request *http.Request)
 	challengePost(response http.ResponseWriter, request *http.Request)
 	challengeGet(response http.ResponseWriter, request *http.Request)
+	challengeTable(response http.ResponseWriter, request *http.Request)
 	uploadPhotoHandler(response http.ResponseWriter, request *http.Request)
 }
 
@@ -105,10 +106,6 @@ func (app *AppObject) voteHandler(response http.ResponseWriter, request *http.Re
 // 		http.StatusTemporaryRedirect)
 // }
 
-func appVersion(w http.ResponseWriter, req *http.Request) {
-	fmt.Fprintf(w, "Hello, I am version 0.0.1 %q", html.EscapeString(req.URL.Path))
-}
-
 func (app *AppObject) Close() {
 	// close the connection to the database when the app instance destructs
 	app.dal.Close()
@@ -118,7 +115,23 @@ func (app *AppObject) appVersion(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(w, "Hello, I am version 0.0.1 %q", html.EscapeString(req.URL.Path))
 }
 
+func (app *AppObject) challengeTable(response http.ResponseWriter, request *http.Request) {
+	log.Println("received request for challenge table")
+	challenges, err := app.dal.GetChallengeTable()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	data, err := json.Marshal(challenges)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	response.Write(data)
+}
+
 func (app *AppObject) challengeGet(response http.ResponseWriter, request *http.Request) {
+	log.Println("received request for challenge get")
 	vars := mux.Vars(request)
 	lat := vars["lat"]
 	lng := vars["lng"]
@@ -132,7 +145,7 @@ func (app *AppObject) challengeGet(response http.ResponseWriter, request *http.R
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
-	fmt.Println(string(body))
+	// fmt.Println(string(body))
 	var f interface{}
 	jsonParseErr := json.Unmarshal(body, &f)
 
@@ -152,7 +165,7 @@ func (app *AppObject) challengeGet(response http.ResponseWriter, request *http.R
 			photos := result["photos"].([]interface{})
 			photo := photos[0].(map[string]interface{})
 			photoID = photo["photo_reference"].(string)
-			fmt.Println(photoID)
+			// fmt.Println(photoID)
 		}
 
 		url := photoID
@@ -238,6 +251,7 @@ func main() {
 	router.HandleFunc("/", app.indexPageHandler)
 	router.HandleFunc("/challenge", app.challengePost).Methods("POST")
 	router.HandleFunc("/challenge/{lat}/{lng}", app.challengeGet).Methods("GET")
+	router.HandleFunc("/challengetable", app.challengeTable).Methods("GET")
 	// router.HandleFunc("/location", Location).Methods("GET")
 	router.HandleFunc("/uploadphoto", app.uploadPhotoHandler).Methods("POST")
 	router.HandleFunc("/vote", app.voteHandler).Methods("POST")
