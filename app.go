@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
+        "time"
 	//"github.com/gorilla/securecookie"
 	//"gopkg.in/mgo.v2"
 	//"gopkg.in/mgo.v2/bson"
@@ -62,6 +63,9 @@ func NewApp() AppInterface {
 
 var nouns []interface{}
 var verbs []interface{}
+// var locTypes interface{}
+var locTypes []string
+
 
 func check(e error) {
 	if e != nil {
@@ -136,68 +140,86 @@ func (app *AppObject) challengeGet(response http.ResponseWriter, request *http.R
 	lat := vars["lat"]
 	lng := vars["lng"]
 
-	url := fmt.Sprintf("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%s,%s&radius=1000&key=AIzaSyDv8MqlGr7dxQDCb7STkYGRqdCA5wuLHMM", lat, lng)
-	resp, err := http.Get(url)
+        fmt.Println(lat)
+        fmt.Println(lng)
 
-	if err != nil {
-		// handle error
-	}
+        // testme, err := app.dal.LoadChallengeByLoc(lat, lng)
+        // _ = testme
 
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	// fmt.Println(string(body))
-	var f interface{}
-	jsonParseErr := json.Unmarshal(body, &f)
+        for j := 0 ; j < 10 ; j++ {
+                randType := locTypes[rand.Intn(len(locTypes))]
+                url := fmt.Sprintf("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%s,%s&type=%s&radius=1000&key=AIzaSyDv8MqlGr7dxQDCb7STkYGRqdCA5wuLHMM", lat, lng, randType)
+                resp, err := http.Get(url)
 
-	if jsonParseErr != nil {
-		//handle error next time
-	}
+                if err != nil {
+                        // handle error
+                }
 
-	m := f.(map[string]interface{})
-	results := m["results"].([]interface{})
-	//	var placeIDs = results[1:len(results)]
+                defer resp.Body.Close()
+                body, err := ioutil.ReadAll(resp.Body)
+                // fmt.Println(string(body))
+                var f interface{}
+                jsonParseErr := json.Unmarshal(body, &f)
 
-	for i := 0; i < len(results); i++ {
+                if jsonParseErr != nil {
+                        //handle error next time
+                }
 
-		result := results[i].(map[string]interface{})
-		photoID := ""
-		if result["photos"] != nil {
-			photos := result["photos"].([]interface{})
-			photo := photos[0].(map[string]interface{})
-			photoID = photo["photo_reference"].(string)
-			// fmt.Println(photoID)
-		}
+                m := f.(map[string]interface{})
+                results := m["results"].([]interface{})
 
-		url := photoID
-		geometry := result["geometry"].(map[string]interface{})
-		location := geometry["location"].(map[string]interface{})
+                if len(results) != 0 {
+                        //	var placeIDs = results[1:len(results)]
 
-		name := result["name"].(string)
-		lat := location["lat"].(float64)
-		lng := location["lng"].(float64)
+                        for i := 0; i < len(results); i++ {
 
-		item := GeoLoc{Name: name, Lat: FloatToString(lat), Lng: FloatToString(lng), Url: url}
+                                result := results[i].(map[string]interface{})
+                                photoID := ""
+                                if result["photos"] != nil {
+                                        photos := result["photos"].([]interface{})
+                                        photo := photos[0].(map[string]interface{})
+                                        photoID = photo["photo_reference"].(string)
+                                        // fmt.Println(photoID)
+                                }
 
-		results[i] = item
-	}
+                                url := photoID
+                                geometry := result["geometry"].(map[string]interface{})
+                                location := geometry["location"].(map[string]interface{})
 
-	//fmt.Println(results)
-	//fmt.Print(rand.Intn(len(results)))
-	result := results[rand.Intn(len(results))].(GeoLoc)
-	verbsMap := verbs[rand.Intn(len(verbs))].(map[string]interface{})
+                                name := result["name"].(string)
+                                lat := location["lat"].(float64)
+                                lng := location["lng"].(float64)
 
-	//fmt.Println(verbsMap["present"])
-	//fmt.Println(nouns[rand.Intn(len(nouns))])
-	challenge := Challenge{result.Name, result.Lat, result.Lng, result.Url, verbsMap["present"].(string), nouns[rand.Intn(len(nouns))].(string)}
-	//fmt.Println(result)
+                                item := GeoLoc{Name: name, Lat: FloatToString(lat), Lng: FloatToString(lng), Url: url}
 
-	app.dal.SaveChallenge(challenge)
+                                results[i] = item
+                        }
 
-	b, err := json.Marshal(challenge)
+                        fmt.Println(results)
+                        // fmt.Print(rand.Intn(len(results)))
+                        result := results[rand.Intn(len(results))].(GeoLoc)
+                        verbsMap := verbs[rand.Intn(len(verbs))].(map[string]interface{})
 
-	//fmt.Println(b)
+                        //fmt.Println(verbsMap["present"])
+                        //fmt.Println(nouns[rand.Intn(len(nouns))])
+                        challenge := Challenge{result.Name, result.Lat, result.Lng, result.Url, verbsMap["present"].(string), nouns[rand.Intn(len(nouns))].(string)}
+                        //fmt.Println(result)
 
-	response.Write(b)
+                        app.dal.SaveChallenge(challenge)
+
+                        b, err := json.Marshal(challenge)
+                        _ = err
+
+                        //fmt.Println(b)
+
+                        response.Write(b)
+                        return
+
+                }
+
+        }
+
+
 }
 
 func start80(wg *sync.WaitGroup, handler http.HandlerFunc) {
@@ -216,33 +238,7 @@ func start443(wg *sync.WaitGroup, handler http.Handler) {
 	log.Println("done with 443")
 }
 
-func main() {
-	// create application state and connect to database
-	var app = NewApp()
-	defer app.Close()
-
-	dat, err := ioutil.ReadFile("./nouns.json")
-	check(err)
-	// fmt.Println(string(dat))
-
-	var n interface{}
-	nounJsonParseErr := json.Unmarshal(dat, &n)
-	check(nounJsonParseErr)
-
-	nounsMap := n.(map[string]interface{})
-	nouns = nounsMap["nouns"].([]interface{})
-	// fmt.Println(nouns)
-
-	var v interface{}
-	verbDat, verbIOerr := ioutil.ReadFile("./verbs.json")
-	check(verbIOerr)
-	verbJsonParseErr := json.Unmarshal(verbDat, &v)
-	check(verbJsonParseErr)
-
-	verbsMap := v.(map[string]interface{})
-	verbs = verbsMap["verbs"].([]interface{})
-	// fmt.Println(verbs)
-
+func createRouter(app AppInterface) http.Handler {
 	/// create a router with the gorilla mux router and handle the requests
 	var router = mux.NewRouter()
 
@@ -263,6 +259,52 @@ func main() {
 	})
 	handler := corsOpts.Handler(router)
 
+        return handler
+}
+
+func main() {
+        rand.Seed(time.Now().UTC().UnixNano())
+
+	// create application state and connect to database
+	var app = NewApp()
+	defer app.Close()
+
+	dat, err := ioutil.ReadFile("./nouns.json")
+	check(err)
+	// fmt.Println(string(dat))
+
+        // nouns
+	var n interface{}
+	nounJsonParseErr := json.Unmarshal(dat, &n)
+	check(nounJsonParseErr)
+
+	nounsMap := n.(map[string]interface{})
+	nouns = nounsMap["nouns"].([]interface{})
+	// fmt.Println(nouns)
+
+        // verbs
+	var v interface{}
+	verbDat, verbIOerr := ioutil.ReadFile("./verbs.json")
+	check(verbIOerr)
+	verbJsonParseErr := json.Unmarshal(verbDat, &v)
+	check(verbJsonParseErr)
+
+	verbsMap := v.(map[string]interface{})
+	verbs = verbsMap["verbs"].([]interface{})
+	// fmt.Println(verbs)
+
+        // google map location types
+        // var locTypes interface{}
+        // data, err := ioutil.ReadFile("./map-types.json")
+        // check(err)
+        // err = json.Unmarshal(data, &locTypes)
+        // check(err)
+
+        locTypes = []string{"accounting","airport","amusement_park","aquarium","art_gallery","atm","bakery","bank","bar","beauty_salon","bicycle_store","book_store","bowling_alley","bus_station","cafe","campground","car_dealer","car_rental","car_repair","car_wash","casino","cemetery","church","city_hall","clothing_store","convenience_store","courthouse","dentist","department_store","doctor","electrician","electronics_store","embassy","fire_station","florist","funeral_home","furniture_store","gas_station","gym","hair_care","hardware_store","hindu_temple","home_goods_store","hospital","insurance_agency","jewelry_store","laundry","lawyer","library","liquor_store","local_government_office","locksmith","lodging","meal_delivery","meal_takeaway","mosque","movie_rental","movie_theater","moving_company","museum","night_club","painter","park","parking","pet_store","pharmacy","physiotherapist","plumber","police","post_office","real_estate_agency","restaurant","roofing_contractor","rv_park","school","shoe_store","shopping_mall","spa","stadium","storage","store","subway_station","synagogue","taxi_stand","train_station","transit_station","travel_agency","university","veterinary_care","zoo"}
+
+
+        handler := createRouter(app)
+
 	// start http and https servers
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -270,3 +312,4 @@ func main() {
 	go start443(&wg, handler)
 	wg.Wait()
 }
+
