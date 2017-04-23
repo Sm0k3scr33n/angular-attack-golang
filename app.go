@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 	"html"
 	"io/ioutil"
 	"log"
@@ -72,7 +73,7 @@ func challengeGet(response http.ResponseWriter, request *http.Request) {
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
-
+	fmt.Println(string(body))
 	var f interface{}
 	jsonParseErr := json.Unmarshal(body, &f)
 
@@ -87,12 +88,15 @@ func challengeGet(response http.ResponseWriter, request *http.Request) {
 	for i := 0; i < len(results); i++ {
 
 		result := results[i].(map[string]interface{})
+		photoID := ""
+		if ( result["photos"] != nil) {
+		   photos := result["photos"].([]interface{})
+		   photo := photos[0].(map[string]interface{})
+		   photoID = photo["photo_reference"].(string)
+		   fmt.Println(photoID)
+		}
 
-		photos := result["photos"].([]interface{})
-		photo := photos[0].(map[string]interface{})
-		photoID := photo["photo_reference"]
-		fmt.Println(photoID)
-		url := photoID.(string)
+		url := photoID
 		geometry := result["geometry"].(map[string]interface{})
 		location := geometry["location"].(map[string]interface{})
 
@@ -182,9 +186,10 @@ func main() {
 	router.HandleFunc("/uploadphoto", uploadPhotoHandler).Methods("POST")
 	router.HandleFunc("/vote", voteHandler).Methods("POST")
 	http.Handle("/", router)
+	handler := cors.Default().Handler(router)
 	port := ":80"
 	go http.ListenAndServe(port, http.HandlerFunc(appVersion))
 	// port2 := ":443"
 	// go http.ListenAndServeTLS(port2,"cert.pem", "key.pem", http.HandlerFunc(appVersion))
-	http.ListenAndServeTLS(":443", "../fullchain.pem", "../privkey.pem", nil)
+	http.ListenAndServeTLS(":443", "../fullchain.pem", "../privkey.pem", handler)
 }
