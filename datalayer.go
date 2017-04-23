@@ -34,7 +34,7 @@ type DataLayerInterface interface {
 
 	SaveChallenge(obj interface{}) error
 	LoadChallenge() (bson.M, error)
-        LoadChallengeByLoc(lat string, lng string) (bson.M, error)
+	LoadChallengeByLoc(lat string, lng string) (bson.M, error)
 	GetChallengeTable() (bson.M, error)
 }
 
@@ -125,18 +125,18 @@ func (dbo *DataLayerObject) LoadChallenge() (bson.M, error) {
 }
 
 func (dbo *DataLayerObject) LoadChallengeByLoc(lat string, lng string) (bson.M, error) {
-        var result bson.M
-        c := dbo.session.DB(MONGO_DB).C("challenges")
-        err := c.Find(nil).One(&result)
-        // todo(mg) need to figure out how to match lat and lng by nearby coordinates,
-        // and they are stored in mongo as strings.
-        // err := c.Find(bson.M{"Lat": bson.M{"$near": []float64}}).One(&result)
-        if err != nil {
-                fmt.Println(nil)
-                return nil, nil
-        }
-        fmt.Println(result)
-        return nil, nil
+	var result bson.M
+	c := dbo.session.DB(MONGO_DB).C("challenges")
+	err := c.Find(nil).One(&result)
+	// todo(mg) need to figure out how to match lat and lng by nearby coordinates,
+	// and they are stored in mongo as strings.
+	// err := c.Find(bson.M{"Lat": bson.M{"$near": []float64}}).One(&result)
+	if err != nil {
+		fmt.Println(nil)
+		return nil, nil
+	}
+	fmt.Println(result)
+	return nil, nil
 }
 
 func (dbo *DataLayerObject) GetChallengeTable() (bson.M, error) {
@@ -148,7 +148,6 @@ func (dbo *DataLayerObject) GetChallengeTable() (bson.M, error) {
 		log.Println(err)
 		return nil, err
 	}
-        var out = bson.M{"results": results}
+	var out = bson.M{"results": results}
 	return out, nil
 }
-
