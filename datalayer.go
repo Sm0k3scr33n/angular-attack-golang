@@ -5,13 +5,12 @@ import (
 	"gopkg.in/mgo.v2"
 	"log"
 	// "time"
-	// "gopkg.in/mgo.v2/bson"
+	"gopkg.in/mgo.v2/bson"
 )
 
 // mongo connection string
 const MONGO_HOST = "localhost"
 const MONGO_DB = "test"
-
 
 // type Challenge struct {
 // 	Id           int
@@ -34,6 +33,7 @@ type DataLayerInterface interface {
 	SaveGeneric(obj interface{}) error
 
 	SaveChallenge(obj interface{}) error
+	LoadChallenge() error
 }
 
 // NewDataLayer() factory returns an object that implements
@@ -100,6 +100,7 @@ func (dbo *DataLayerObject) SaveGeneric(obj interface{}) error {
 }
 
 func (dbo *DataLayerObject) SaveChallenge(obj interface{}) error {
+	log.Println("saving challenge to mongo")
 	// c = collection
 	c := dbo.session.DB(MONGO_DB).C("challenges")
 
@@ -110,27 +111,13 @@ func (dbo *DataLayerObject) SaveChallenge(obj interface{}) error {
 	return nil
 }
 
-/*
-func main() {
-	dal := NewDataLayer()
-	defer dal.Close()
-	obj := Challenge{Id: 2,
-		Latitude:     "39.734114",
-		Longitude:    "-104.9797755,15",
-		ChallengeStr: "Drink a beer with Rob Stone",
-		Score:        10,
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now()}
-	// dal.SaveStruct(&obj)
-	dal.SaveGeneric(&obj)
-
-	// fetching data from the collection...
-	// bson.M is a map[string]interface{} type
-	// var result bson.M
-	// err := c.Find(nil).One(&result)
-	// if err != nil {
-	//   log.Fatal(err)
-	// }
-	// fmt.Println(result)
+func (dbo *DataLayerObject) LoadChallenge() error {
+	var result bson.M
+	c := dbo.session.DB(MONGO_DB).C("challenges")
+	err := c.Find(nil).One(&result)
+	if err != nil {
+		return err
+	}
+	fmt.Println(result)
+	return nil
 }
-*/
